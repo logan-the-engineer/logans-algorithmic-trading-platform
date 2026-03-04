@@ -1,0 +1,1513 @@
+openapi: 3.0.3
+info:
+  title: Algorithmic Trading Platform API
+  version: 0.1.0
+  description: >
+    API contract for a modular algorithmic trading platform supporting market data ingestion,
+    feature computation, backtesting, paper/live runs, risk enforcement, and execution.
+
+servers:
+  - url: /api/v1
+
+tags:
+  - name: System
+  - name: Control
+  - name: Symbols
+  - name: MarketData
+  - name: Features
+  - name: Strategies
+  - name: Backtests
+  - name: Runs
+  - name: Risk
+  - name: Orders
+  - name: Observability
+  - name: Jobs
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [System]
+      summary: Health check
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /version:
+    get:
+      tags: [System]
+      summary: Service version
+      security: []
+      responses:
+        "200":
+          description: Version info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VersionResponse"
+
+  /config:
+    get:
+      tags: [System]
+      summary: Get active configuration and feature flags
+      responses:
+        "200":
+          description: Config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /control/trading/halt:
+    post:
+      tags: [Control]
+      summary: Halt trading (kill switch)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ControlRequest"
+      responses:
+        "200":
+          description: Trading halted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ControlResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /control/trading/resume:
+    post:
+      tags: [Control]
+      summary: Resume trading
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ControlRequest"
+      responses:
+        "200":
+          description: Trading resumed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ControlResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /symbols:
+    get:
+      tags: [Symbols]
+      summary: List supported symbols
+      parameters:
+        - name: asset_class
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [equity, crypto]
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Symbols list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SymbolsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /marketdata/bars:
+    get:
+      tags: [MarketData]
+      summary: Fetch historical bars from internal storage
+      parameters:
+        - $ref: "#/components/parameters/symbol"
+        - $ref: "#/components/parameters/timeframe"
+        - $ref: "#/components/parameters/start"
+        - $ref: "#/components/parameters/end"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Bars
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BarsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /marketdata/backfill:
+    post:
+      tags: [MarketData, Jobs]
+      summary: Trigger historical backfill job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BackfillRequest"
+      responses:
+        "202":
+          description: Backfill job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobEnqueuedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /jobs/{job_id}:
+    get:
+      tags: [Jobs]
+      summary: Get job status
+      parameters:
+        - $ref: "#/components/parameters/job_id"
+      responses:
+        "200":
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobStatus"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /features/compute:
+    post:
+      tags: [Features, Jobs]
+      summary: Compute and store features (async)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureComputeRequest"
+      responses:
+        "202":
+          description: Feature compute job queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobEnqueuedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /features:
+    get:
+      tags: [Features]
+      summary: Fetch computed features
+      parameters:
+        - $ref: "#/components/parameters/symbol"
+        - $ref: "#/components/parameters/timeframe"
+        - name: feature_set
+          in: query
+          required: false
+          schema:
+            type: string
+            default: basic_v1
+        - $ref: "#/components/parameters/start"
+        - $ref: "#/components/parameters/end"
+      responses:
+        "200":
+          description: Feature rows
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeaturesResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /strategies:
+    get:
+      tags: [Strategies]
+      summary: List available strategies
+      responses:
+        "200":
+          description: Strategies
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StrategiesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /strategies/{strategy_id}:
+    get:
+      tags: [Strategies]
+      summary: Get strategy detail and parameter schema
+      parameters:
+        - $ref: "#/components/parameters/strategy_id"
+      responses:
+        "200":
+          description: Strategy detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StrategyDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /backtests:
+    post:
+      tags: [Backtests]
+      summary: Create a backtest run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BacktestRequest"
+      responses:
+        "201":
+          description: Backtest created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BacktestCreatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /backtests/{backtest_id}:
+    get:
+      tags: [Backtests]
+      summary: Get backtest run status and config
+      parameters:
+        - $ref: "#/components/parameters/backtest_id"
+      responses:
+        "200":
+          description: Backtest status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BacktestStatusResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /backtests/{backtest_id}/metrics:
+    get:
+      tags: [Backtests]
+      summary: Get backtest performance metrics
+      parameters:
+        - $ref: "#/components/parameters/backtest_id"
+      responses:
+        "200":
+          description: Metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BacktestMetricsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /backtests/{backtest_id}/equity_curve:
+    get:
+      tags: [Backtests]
+      summary: Get equity curve points
+      parameters:
+        - $ref: "#/components/parameters/backtest_id"
+      responses:
+        "200":
+          description: Equity curve
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EquityCurveResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /backtests/{backtest_id}/trades:
+    get:
+      tags: [Backtests]
+      summary: Get backtest trades
+      parameters:
+        - $ref: "#/components/parameters/backtest_id"
+      responses:
+        "200":
+          description: Trades
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TradesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /runs:
+    post:
+      tags: [Runs]
+      summary: Start a live/paper strategy run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunRequest"
+      responses:
+        "201":
+          description: Run started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunCreatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /runs/{run_id}:
+    get:
+      tags: [Runs]
+      summary: Get run status
+      parameters:
+        - $ref: "#/components/parameters/run_id"
+      responses:
+        "200":
+          description: Run status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunStatusResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /runs/{run_id}/stop:
+    post:
+      tags: [Runs]
+      summary: Stop a run
+      parameters:
+        - $ref: "#/components/parameters/run_id"
+      responses:
+        "200":
+          description: Run stopped
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunStoppedResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /risk/profiles:
+    get:
+      tags: [Risk]
+      summary: List risk profiles
+      responses:
+        "200":
+          description: Risk profiles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskProfilesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Risk]
+      summary: Create a risk profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRiskProfileRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateRiskProfileResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /orders:
+    post:
+      tags: [Orders]
+      summary: Create an order (supports idempotency)
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Reuse the same key to safely retry creates.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderRequest"
+      responses:
+        "201":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderCreatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /orders/{order_id}:
+    get:
+      tags: [Orders]
+      summary: Get order details
+      parameters:
+        - $ref: "#/components/parameters/order_id"
+      responses:
+        "200":
+          description: Order status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderStatusResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /orders/{order_id}/cancel:
+    post:
+      tags: [Orders]
+      summary: Cancel an order
+      parameters:
+        - $ref: "#/components/parameters/order_id"
+      responses:
+        "200":
+          description: Canceled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancelOrderResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /fills:
+    get:
+      tags: [Orders]
+      summary: Query fills
+      parameters:
+        - name: run_id
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: symbol
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: start
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: end
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Fills
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FillsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /positions:
+    get:
+      tags: [Orders]
+      summary: Get current positions
+      responses:
+        "200":
+          description: Positions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PositionsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /events:
+    get:
+      tags: [Observability]
+      summary: Query system/trading events
+      parameters:
+        - name: level
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [info, warn, error]
+        - name: run_id
+          in: query
+          required: false
+          schema:
+            type: string
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /metrics/summary:
+    get:
+      tags: [Observability]
+      summary: System and trading summary metrics
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MetricsSummaryResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    symbol:
+      name: symbol
+      in: query
+      required: true
+      schema:
+        type: string
+    timeframe:
+      name: timeframe
+      in: query
+      required: true
+      schema:
+        type: string
+        enum: [1m, 5m, 1h, 1d]
+    start:
+      name: start
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date-time
+    end:
+      name: end
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date-time
+    limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 10000
+        default: 500
+    job_id:
+      name: job_id
+      in: path
+      required: true
+      schema:
+        type: string
+    strategy_id:
+      name: strategy_id
+      in: path
+      required: true
+      schema:
+        type: string
+    backtest_id:
+      name: backtest_id
+      in: path
+      required: true
+      schema:
+        type: string
+    run_id:
+      name: run_id
+      in: path
+      required: true
+      schema:
+        type: string
+    order_id:
+      name: order_id
+      in: path
+      required: true
+      schema:
+        type: string
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    # ---- Common ----
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorObject"
+
+    ErrorObject:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: INVALID_ARGUMENT
+        message:
+          type: string
+          example: symbol is required
+        details:
+          type: object
+          additionalProperties: true
+
+    HealthResponse:
+      type: object
+      required: [status, time]
+      properties:
+        status:
+          type: string
+          example: ok
+        time:
+          type: string
+          format: date-time
+
+    VersionResponse:
+      type: object
+      required: [name, version]
+      properties:
+        name:
+          type: string
+          example: trading-platform
+        version:
+          type: string
+          example: 0.1.0
+        commit:
+          type: string
+          nullable: true
+          example: abc123
+
+    ConfigResponse:
+      type: object
+      required: [environment, mode, features]
+      properties:
+        environment:
+          type: string
+          example: dev
+        mode:
+          type: string
+          enum: [paper, live]
+        risk_profile_id:
+          type: string
+          nullable: true
+        features:
+          type: object
+          additionalProperties:
+            type: boolean
+
+    ControlRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+
+    ControlResponse:
+      type: object
+      required: [halted, time]
+      properties:
+        halted:
+          type: boolean
+        time:
+          type: string
+          format: date-time
+
+    # ---- Symbols ----
+    Symbol:
+      type: object
+      required: [symbol, asset_class]
+      properties:
+        symbol:
+          type: string
+          example: AAPL
+        asset_class:
+          type: string
+          enum: [equity, crypto]
+        exchange:
+          type: string
+          nullable: true
+          example: NASDAQ
+
+    SymbolsResponse:
+      type: object
+      required: [symbols]
+      properties:
+        symbols:
+          type: array
+          items:
+            $ref: "#/components/schemas/Symbol"
+
+    # ---- Market data ----
+    Bar:
+      type: object
+      required: [ts, open, high, low, close, volume]
+      properties:
+        ts:
+          type: string
+          format: date-time
+        open:
+          type: number
+          format: double
+        high:
+          type: number
+          format: double
+        low:
+          type: number
+          format: double
+        close:
+          type: number
+          format: double
+        volume:
+          type: integer
+          format: int64
+
+    BarsResponse:
+      type: object
+      required: [symbol, timeframe, bars]
+      properties:
+        symbol:
+          type: string
+        timeframe:
+          type: string
+          enum: [1m, 5m, 1h, 1d]
+        bars:
+          type: array
+          items:
+            $ref: "#/components/schemas/Bar"
+
+    BackfillRequest:
+      type: object
+      required: [symbols, timeframe, start, end, source]
+      properties:
+        symbols:
+          type: array
+          items: { type: string }
+          minItems: 1
+        timeframe:
+          type: string
+          enum: [1m, 5m, 1h, 1d]
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        source:
+          type: string
+          example: polygon
+
+    # ---- Jobs ----
+    JobEnqueuedResponse:
+      type: object
+      required: [job_id, status]
+      properties:
+        job_id:
+          type: string
+        status:
+          type: string
+          enum: [queued]
+
+    JobStatus:
+      type: object
+      required: [job_id, status]
+      properties:
+        job_id:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, finished, failed]
+        progress:
+          type: number
+          format: double
+          nullable: true
+          minimum: 0
+          maximum: 1
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        message:
+          type: string
+          nullable: true
+
+    # ---- Features ----
+    FeatureComputeRequest:
+      type: object
+      required: [symbols, timeframe, start, end, feature_set]
+      properties:
+        symbols:
+          type: array
+          items: { type: string }
+          minItems: 1
+        timeframe:
+          type: string
+          enum: [1m, 5m, 1h, 1d]
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        feature_set:
+          type: string
+          example: basic_v1
+
+    FeatureRow:
+      type: object
+      required: [ts]
+      properties:
+        ts:
+          type: string
+          format: date-time
+      additionalProperties: true
+
+    FeaturesResponse:
+      type: object
+      required: [symbol, timeframe, feature_set, rows]
+      properties:
+        symbol:
+          type: string
+        timeframe:
+          type: string
+          enum: [1m, 5m, 1h, 1d]
+        feature_set:
+          type: string
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeatureRow"
+
+    # ---- Strategies ----
+    StrategyMeta:
+      type: object
+      required: [strategy_id, name, type]
+      properties:
+        strategy_id:
+          type: string
+          example: sma_cross_v1
+        name:
+          type: string
+          example: SMA Crossover v1
+        type:
+          type: string
+          enum: [rules, ml]
+
+    StrategiesResponse:
+      type: object
+      required: [strategies]
+      properties:
+        strategies:
+          type: array
+          items:
+            $ref: "#/components/schemas/StrategyMeta"
+
+    StrategyParamSpec:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [int, float, string, bool]
+        min:
+          type: number
+          nullable: true
+        max:
+          type: number
+          nullable: true
+        default:
+          nullable: true
+          oneOf:
+            - type: number
+            - type: string
+            - type: boolean
+
+    StrategyDetail:
+      allOf:
+        - $ref: "#/components/schemas/StrategyMeta"
+        - type: object
+          required: [parameters_schema]
+          properties:
+            parameters_schema:
+              type: object
+              additionalProperties:
+                $ref: "#/components/schemas/StrategyParamSpec"
+
+    # ---- Backtests ----
+    BacktestRequest:
+      type: object
+      required:
+        - strategy_id
+        - symbols
+        - timeframe
+        - start
+        - end
+        - initial_cash
+        - fees_bps
+        - slippage_bps
+      properties:
+        strategy_id:
+          type: string
+        symbols:
+          type: array
+          items: { type: string }
+          minItems: 1
+        timeframe:
+          type: string
+          enum: [1m, 5m, 1h, 1d]
+        start:
+          type: string
+          format: date-time
+        end:
+          type: string
+          format: date-time
+        initial_cash:
+          type: number
+          format: double
+          minimum: 0
+        fees_bps:
+          type: number
+          format: double
+          minimum: 0
+        slippage_bps:
+          type: number
+          format: double
+          minimum: 0
+        parameters:
+          type: object
+          additionalProperties: true
+
+    BacktestCreatedResponse:
+      type: object
+      required: [backtest_id, status]
+      properties:
+        backtest_id:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, finished, failed]
+
+    BacktestStatusResponse:
+      type: object
+      required: [backtest_id, status, created_at, config]
+      properties:
+        backtest_id:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, finished, failed]
+        created_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        finished_at:
+          type: string
+          format: date-time
+          nullable: true
+        config:
+          $ref: "#/components/schemas/BacktestRequest"
+
+    BacktestMetrics:
+      type: object
+      properties:
+        total_return:
+          type: number
+          format: double
+        cagr:
+          type: number
+          format: double
+        sharpe:
+          type: number
+          format: double
+        max_drawdown:
+          type: number
+          format: double
+        win_rate:
+          type: number
+          format: double
+        num_trades:
+          type: integer
+      additionalProperties: true
+
+    BacktestMetricsResponse:
+      type: object
+      required: [backtest_id, metrics]
+      properties:
+        backtest_id:
+          type: string
+        metrics:
+          $ref: "#/components/schemas/BacktestMetrics"
+
+    EquityPoint:
+      type: object
+      required: [ts, equity]
+      properties:
+        ts:
+          type: string
+          format: date-time
+        equity:
+          type: number
+          format: double
+
+    EquityCurveResponse:
+      type: object
+      required: [backtest_id, points]
+      properties:
+        backtest_id:
+          type: string
+        points:
+          type: array
+          items:
+            $ref: "#/components/schemas/EquityPoint"
+
+    Trade:
+      type: object
+      required: [ts, symbol, side, qty, price]
+      properties:
+        ts:
+          type: string
+          format: date-time
+        symbol:
+          type: string
+        side:
+          type: string
+          enum: [BUY, SELL]
+        qty:
+          type: number
+          format: double
+        price:
+          type: number
+          format: double
+        fee:
+          type: number
+          format: double
+          nullable: true
+
+    TradesResponse:
+      type: object
+      required: [backtest_id, trades]
+      properties:
+        backtest_id:
+          type: string
+        trades:
+          type: array
+          items:
+            $ref: "#/components/schemas/Trade"
+
+    # ---- Runs ----
+    RunRequest:
+      type: object
+      required: [mode, strategy_id, symbols, timeframe, risk_profile_id]
+      properties:
+        mode:
+          type: string
+          enum: [paper, live]
+        strategy_id:
+          type: string
+        symbols:
+          type: array
+          items: { type: string }
+          minItems: 1
+        timeframe:
+          type: string
+          enum: [1m, 5m, 1h, 1d]
+        parameters:
+          type: object
+          additionalProperties: true
+        risk_profile_id:
+          type: string
+
+    RunCreatedResponse:
+      type: object
+      required: [run_id, status]
+      properties:
+        run_id:
+          type: string
+        status:
+          type: string
+          enum: [running]
+
+    RunStatusResponse:
+      type: object
+      required: [run_id, mode, status, strategy_id, symbols, started_at]
+      properties:
+        run_id:
+          type: string
+        mode:
+          type: string
+          enum: [paper, live]
+        status:
+          type: string
+          enum: [running, stopped, failed]
+        strategy_id:
+          type: string
+        symbols:
+          type: array
+          items: { type: string }
+        timeframe:
+          type: string
+          enum: [1m, 5m, 1h, 1d]
+        started_at:
+          type: string
+          format: date-time
+        stopped_at:
+          type: string
+          format: date-time
+          nullable: true
+        message:
+          type: string
+          nullable: true
+
+    RunStoppedResponse:
+      type: object
+      required: [run_id, status, stopped_at]
+      properties:
+        run_id:
+          type: string
+        status:
+          type: string
+          enum: [stopped]
+        stopped_at:
+          type: string
+          format: date-time
+
+    # ---- Risk ----
+    RiskLimits:
+      type: object
+      required: [max_position_value, max_daily_loss, max_gross_exposure]
+      properties:
+        max_position_value:
+          type: number
+          format: double
+          minimum: 0
+        max_daily_loss:
+          type: number
+          format: double
+          minimum: 0
+        max_gross_exposure:
+          type: number
+          format: double
+          minimum: 0
+
+    RiskProfile:
+      type: object
+      required: [risk_profile_id, name, limits]
+      properties:
+        risk_profile_id:
+          type: string
+        name:
+          type: string
+        limits:
+          $ref: "#/components/schemas/RiskLimits"
+
+    RiskProfilesResponse:
+      type: object
+      required: [profiles]
+      properties:
+        profiles:
+          type: array
+          items:
+            $ref: "#/components/schemas/RiskProfile"
+
+    CreateRiskProfileRequest:
+      type: object
+      required: [name, limits]
+      properties:
+        name:
+          type: string
+        limits:
+          $ref: "#/components/schemas/RiskLimits"
+
+    CreateRiskProfileResponse:
+      type: object
+      required: [risk_profile_id]
+      properties:
+        risk_profile_id:
+          type: string
+
+    # ---- Orders ----
+    OrderRequest:
+      type: object
+      required: [run_id, symbol, side, qty, type]
+      properties:
+        run_id:
+          type: string
+        symbol:
+          type: string
+        side:
+          type: string
+          enum: [BUY, SELL]
+        qty:
+          type: number
+          format: double
+          minimum: 0
+        type:
+          type: string
+          enum: [market, limit]
+        limit_price:
+          type: number
+          format: double
+          nullable: true
+        time_in_force:
+          type: string
+          enum: [day, gtc]
+          default: day
+
+    OrderCreatedResponse:
+      type: object
+      required: [order_id, status]
+      properties:
+        order_id:
+          type: string
+        status:
+          type: string
+          enum: [submitted, accepted, rejected]
+        broker_order_id:
+          type: string
+          nullable: true
+
+    OrderStatusResponse:
+      type: object
+      required: [order_id, status, symbol, side, qty, filled_qty, created_at, updated_at]
+      properties:
+        order_id:
+          type: string
+        status:
+          type: string
+          enum: [submitted, partially_filled, filled, canceled, rejected]
+        symbol:
+          type: string
+        side:
+          type: string
+          enum: [BUY, SELL]
+        qty:
+          type: number
+          format: double
+        filled_qty:
+          type: number
+          format: double
+        avg_fill_price:
+          type: number
+          format: double
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CancelOrderResponse:
+      type: object
+      required: [order_id, status]
+      properties:
+        order_id:
+          type: string
+        status:
+          type: string
+          enum: [canceled]
+
+    Fill:
+      type: object
+      required: [fill_id, order_id, symbol, qty, price, ts]
+      properties:
+        fill_id:
+          type: string
+        order_id:
+          type: string
+        symbol:
+          type: string
+        qty:
+          type: number
+          format: double
+        price:
+          type: number
+          format: double
+        fee:
+          type: number
+          format: double
+          nullable: true
+        ts:
+          type: string
+          format: date-time
+
+    FillsResponse:
+      type: object
+      required: [fills]
+      properties:
+        fills:
+          type: array
+          items:
+            $ref: "#/components/schemas/Fill"
+
+    Position:
+      type: object
+      required: [symbol, qty, avg_price]
+      properties:
+        symbol:
+          type: string
+        qty:
+          type: number
+          format: double
+        avg_price:
+          type: number
+          format: double
+        market_value:
+          type: number
+          format: double
+          nullable: true
+        unrealized_pnl:
+          type: number
+          format: double
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    PositionsResponse:
+      type: object
+      required: [positions]
+      properties:
+        positions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Position"
+
+    # ---- Observability ----
+    Event:
+      type: object
+      required: [ts, level, type, message]
+      properties:
+        ts:
+          type: string
+          format: date-time
+        level:
+          type: string
+          enum: [info, warn, error]
+        type:
+          type: string
+          example: SIGNAL
+        message:
+          type: string
+        context:
+          type: object
+          additionalProperties: true
+
+    EventsResponse:
+      type: object
+      required: [events]
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+
+    MetricsSummaryResponse:
+      type: object
+      required: [system, trading]
+      properties:
+        system:
+          type: object
+          additionalProperties: true
+          example:
+            uptime_s: 12345
+            queue_lag_ms: 12
+            db_latency_ms: 8
+        trading:
+          type: object
+          additionalProperties: true
+          example:
+            active_runs: 1
+            halted: false
