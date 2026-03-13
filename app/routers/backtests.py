@@ -1,12 +1,53 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
-from app.models import BacktestRequest, BacktestCreatedResponse
+from fastapi import APIRouter, Depends, HTTPException, status
+from app.models import (
+    BacktestCreatedResponse,
+    BacktestRequest,
+    BacktestStatusResponse,
+)
 from app.security import require_auth
-import uuid
+from core.domain.backtest import BacktestMetrics
+from infra.repositories.backtest_repository import BacktestRepository
+from services.backtest_service import BacktestService
+
+_repo = BacktestRepository()
+_service = BacktestService(_repo)
 
 router = APIRouter(dependencies=[Depends(require_auth)])
 
+_NOT_FOUND = {"error": {"code": "NOT_FOUND", "message": "Backtest not found"}}
+
+
 @router.post("/backtests", response_model=BacktestCreatedResponse, status_code=status.HTTP_201_CREATED)
 def create_backtest(req: BacktestRequest) -> BacktestCreatedResponse:
-    return BacktestCreatedResponse(backtest_id=str(uuid.uuid4()), status="queued")
+    run = _service.create(req)
+    return BacktestCreatedResponse(backtest_id=run.backtest_id, status=run.status)
+
+
+@router.get("/backtests/{backtest_id}", response_model=BacktestStatusResponse)
+def get_backtest(backtest_id: str) -> BacktestStatusResponse:
+    run = _service.get_by_id(backtest_id)
+    if run is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND)
+    return BacktestStatusResponse(
+        backtest_id=run.backtest_id,
+        status=run.status,
+        strategy_id=run.strategy_id,
+        symbols=run.symbols,
+        timeframe=run.timeframe,
+        start=run.start,
+        end=run.end,
+        initial_cash=run.initial_cash,
+        fees_bps=run.fees_bps,
+        slippage_bps=run.slippage_bps,
+        parameters=run.parameters,
+    )
+
+
+@router.get("/backtests/{backtest_id}/metrics", response_model=BacktestMetrics)
+def get_backtest_metrics(backtest_id: str):
+    metrics = _service.get_metrics(backtest_id)
+    if metrics is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND)
+    return metrics

@@ -108,6 +108,19 @@ class BacktestCreatedResponse(BaseModel):
     backtest_id: str
     status: Literal["queued", "running", "finished", "failed"]
 
+class BacktestStatusResponse(BaseModel):
+    backtest_id: str
+    status: Literal["queued", "running", "finished", "failed"]
+    strategy_id: str
+    symbols: List[str]
+    timeframe: Timeframe
+    start: str
+    end: str
+    initial_cash: float
+    fees_bps: float
+    slippage_bps: float
+    parameters: Dict[str, Any]
+
 class RunRequest(BaseModel):
     mode: Literal["paper", "live"]
     strategy_id: str
