@@ -69,7 +69,7 @@ All endpoints require a `Bearer` token in the `Authorization` header. Authentica
 ### `POST /api/v1/backtests`
 Submit a backtest run. Accepts a strategy ID, symbols, timeframe, date range, initial capital, fees, slippage, and optional strategy parameters. Returns a UUID and `status: queued`.
 
-**Request body**git checkout maing
+**Request body**
 ```json
 {
   "strategy_id": "sma_cross_v1",
