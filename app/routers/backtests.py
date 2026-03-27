@@ -7,12 +7,10 @@ from app.models import (
     BacktestStatusResponse,
 )
 from app.security import require_auth
-from core.domain.backtest import BacktestMetrics
-from infra.repositories.backtest_repository import BacktestRepository
-from services.backtest_service import BacktestService
+from core.domain.backtest import BacktestMetrics, BacktestStatus
+from infra.wiring import build_backtest_service
 
-_repo = BacktestRepository()
-_service = BacktestService(_repo)
+_service = build_backtest_service()
 
 router = APIRouter(dependencies=[Depends(require_auth)])
 
@@ -46,8 +44,13 @@ def get_backtest(backtest_id: str) -> BacktestStatusResponse:
 
 
 @router.get("/backtests/{backtest_id}/metrics", response_model=BacktestMetrics)
-def get_backtest_metrics(backtest_id: str):
-    metrics = _service.get_metrics(backtest_id)
-    if metrics is None:
+def get_backtest_metrics(backtest_id: str) -> BacktestMetrics:
+    run = _service.get_by_id(backtest_id)
+    if run is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=_NOT_FOUND)
+    if run.status in (BacktestStatus.QUEUED, BacktestStatus.RUNNING):
+        raise HTTPException(status_code=202, detail="Backtest is not yet complete")
+    if run.status == BacktestStatus.FAILED:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Backtest failed; no metrics available")
+    metrics = _service.get_metrics(backtest_id)
     return metrics
