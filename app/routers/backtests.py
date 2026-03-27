@@ -8,13 +8,9 @@ from app.models import (
 )
 from app.security import require_auth
 from core.domain.backtest import BacktestMetrics, BacktestStatus
-from infra.adapters.yfinance_market_data import YFinanceMarketData
-from infra.registries.strategy_registry import StrategyRegistry
-from infra.repositories.backtest_repository import BacktestRepository
-from services.backtest_service import BacktestService
+from infra.wiring import build_backtest_service
 
-# Temporary inline wiring - replaced by build_backtest_service() in Step 4/5.
-_service = BacktestService(BacktestRepository(), StrategyRegistry(), YFinanceMarketData())
+_service = build_backtest_service()
 
 router = APIRouter(dependencies=[Depends(require_auth)])
 
@@ -55,6 +51,6 @@ def get_backtest_metrics(backtest_id: str) -> BacktestMetrics:
     if run.status in (BacktestStatus.QUEUED, BacktestStatus.RUNNING):
         raise HTTPException(status_code=202, detail="Backtest is not yet complete")
     if run.status == BacktestStatus.FAILED:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Backtest failed; no metrics available")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Backtest failed; no metrics available")
     metrics = _service.get_metrics(backtest_id)
     return metrics
