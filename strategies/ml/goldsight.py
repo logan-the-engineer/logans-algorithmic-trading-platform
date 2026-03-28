@@ -8,6 +8,7 @@ import pandas as pd
 
 from core.domain.strategy import Signal, Strategy
 from core.errors import StrategyNotReadyError
+from data.feature_pipeline import FeaturePipeline
 
 ARTIFACT_PATH = pathlib.Path(__file__).parent / "artifacts" / "goldsight_v1.pkl"
 
@@ -47,6 +48,21 @@ class GoldSightStrategy(Strategy):
     def name(self) -> str:
         """Human-readable display name."""
         return "GoldSight v1"
+
+    def compute_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Compute features by delegating to FeaturePipeline.
+
+        Returns the 8-feature DataFrame that this strategy's
+        RandomForest model expects.
+
+        Args:
+            df: Raw OHLCV DataFrame from MarketDataPort.fetch().
+
+        Returns:
+            DataFrame with columns: return_1d, return_5d, ma_5, ma_20,
+            ma_ratio, rsi_14, volatility_10, volume_ratio.
+        """
+        return FeaturePipeline().compute(df)
 
     def generate_signal(self, features: pd.Series) -> Signal:
         """Generate a BUY or SELL signal from a pre-computed feature row.
