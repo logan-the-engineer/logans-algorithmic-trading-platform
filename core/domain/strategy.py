@@ -27,6 +27,14 @@ class Strategy(ABC):
     def name(self) -> str:
         """Human-readable display name for this strategy."""
 
+    def reset(self) -> None:
+        """Lifecycle hook called by BacktestEngine before each simulation run.
+
+        Stateless strategies do not need to override this method. Stateful
+        strategies (e.g., those maintaining a lookback buffer or position
+        flag across bars) should override it to reinitialize that state.
+        """
+
     @abstractmethod
     def compute_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Compute the features this strategy requires from raw OHLCV data.

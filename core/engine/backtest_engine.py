@@ -34,8 +34,8 @@ class SimulationResult:
 class BacktestEngine:
     """Runs a bar-by-bar backtest simulation for a single symbol.
 
-    The engine fetches OHLCV data via a MarketDataPort, computes technical
-    features via FeaturePipeline, then iterates row-by-row calling the
+    The engine fetches OHLCV data via a MarketDataPort, delegates feature
+    computation to the strategy, then iterates row-by-row calling the
     strategy for signals. A long-only, all-in/all-out position model is
     used: BUY buys as many whole shares as cash allows; SELL sells all
     shares. Any open position is force-closed at the final bar.
@@ -55,7 +55,7 @@ class BacktestEngine:
         Fetches data for run.symbols[0], calls strategy.compute_features() to
         derive the feature DataFrame, then steps through each feature row
         calling strategy.generate_signal(). After the simulation, computes and
-        returns BacktestMetrics. The fullSimulationResult (equity curve and trade log)
+        returns BacktestMetrics. The full SimulationResult (equity curve and trade log)
         is stored on self._last_result for inspection.
 
         Args:
@@ -71,6 +71,7 @@ class BacktestEngine:
         Raises:
             ValueError: If market_data.fetch() returns an empty DataFrame.
         """
+        strategy.reset()
         df = self._market_data.fetch(
             run.symbols[0], run.start, run.end, run.timeframe
         )
