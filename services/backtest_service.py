@@ -6,6 +6,7 @@ from app.models import BacktestRequest
 from core.domain.backtest import BacktestMetrics, BacktestRun, BacktestStatus
 from core.domain.strategy import Strategy
 from core.engine.backtest_engine import BacktestEngine
+from core.errors import UnsupportedSymbolError
 from core.ports.market_data import MarketDataPort
 from infra.registries.strategy_registry import StrategyRegistry
 from infra.repositories.backtest_repository import BacktestRepository
@@ -68,6 +69,15 @@ class BacktestService:
             run.status = BacktestStatus.FAILED
             self._repo.save(run)
             return run
+
+        if run.symbols[0] not in strategy.supported_symbols:
+            run.status = BacktestStatus.FAILED
+            self._repo.save(run)
+            raise UnsupportedSymbolError(
+                f"Strategy '{run.strategy_id}' does not support symbol "
+                f"'{run.symbols[0]}'. "
+                f"Supported: {sorted(strategy.supported_symbols)}"
+            )
 
         try:
             run.status = BacktestStatus.RUNNING

@@ -70,3 +70,14 @@ def test_generate_signal_sell_when_prediction_zero() -> None:
     result = strategy.generate_signal(_make_feature_series())
 
     assert result == Signal.SELL
+
+
+def test_supported_symbols_is_gc_f() -> None:
+    """GoldSightStrategy only accepts the GC=F symbol."""
+    mock_model = MagicMock()
+
+    with patch("strategies.ml.goldsight.joblib.load", return_value=mock_model):
+        from strategies.ml.goldsight import GoldSightStrategy
+        strategy = GoldSightStrategy()
+
+    assert strategy.supported_symbols == frozenset({"GC=F"})

@@ -1,5 +1,9 @@
+from unittest.mock import patch
+
 from fastapi.testclient import TestClient
+
 from app.main import app
+from core.errors import UnsupportedSymbolError
 
 client = TestClient(app)
 
@@ -57,3 +61,13 @@ def test_get_metrics_failed_run_returns_422():
 def test_get_metrics_not_found_returns_404():
     r = client.get("/api/v1/backtests/nonexistent-id/metrics", headers=_AUTH)
     assert r.status_code == 404
+
+
+def test_create_backtest_unsupported_symbol_returns_422():
+    """UnsupportedSymbolError from the service layer surfaces as 422."""
+    with patch("app.routers.backtests._service.create") as mock_create:
+        mock_create.side_effect = UnsupportedSymbolError(
+            "Strategy 'goldsight_v1' does not support symbol 'AAPL'. Supported: ['GC=F']"
+        )
+        r = client.post("/api/v1/backtests", json=_VALID_PAYLOAD, headers=_AUTH)
+    assert r.status_code == 422

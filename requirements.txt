@@ -7,3 +7,4 @@ numpy>=1.26
 scikit-learn>=1.4
 joblib>=1.3
 yfinance>=0.2  # training-time only; move to requirements-dev.txt in future
+torch

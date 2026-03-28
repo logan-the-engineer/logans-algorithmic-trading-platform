@@ -8,6 +8,7 @@ from infra.registries.strategy_registry import StrategyRegistry
 from infra.repositories.backtest_repository import BacktestRepository
 from services.backtest_service import BacktestService
 from services.strategy_service import StrategyService
+from strategies.ml.alphatrader import AlphaTraderStrategy
 from strategies.ml.goldsight import GoldSightStrategy
 
 logger = logging.getLogger(__name__)
@@ -29,6 +30,12 @@ def _get_registry() -> StrategyRegistry:
             _shared_registry.register(GoldSightStrategy())
         except StrategyNotReadyError:
             logger.warning("GoldSight artifact not found or unloadable; skipping registration")
+        try:
+            _shared_registry.register(AlphaTraderStrategy())
+        except StrategyNotReadyError:
+            logger.warning(
+                "AlphaTrader artifact not found or unloadable; skipping registration"
+            )
     return _shared_registry
 
 
