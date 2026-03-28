@@ -85,6 +85,11 @@ class SignalSequenceStrategy(Strategy):
     def name(self) -> str:
         return "Test Sequence Strategy"
 
+    def compute_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Delegate to FeaturePipeline, preserving existing test behavior."""
+        from data.feature_pipeline import FeaturePipeline
+        return FeaturePipeline().compute(df)
+
     def generate_signal(self, features: pd.Series) -> Signal:
         """Return the next pre-configured signal, or HOLD if exhausted."""
         if self._i < len(self._signals):

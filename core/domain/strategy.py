@@ -28,6 +28,24 @@ class Strategy(ABC):
         """Human-readable display name for this strategy."""
 
     @abstractmethod
+    def compute_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Compute the features this strategy requires from raw OHLCV data.
+
+        Called by BacktestEngine before the simulation loop. The returned
+        DataFrame's rows are passed one at a time to generate_signal().
+        Shape and column names are strategy-defined.
+
+        Args:
+            df: Raw OHLCV DataFrame as returned by MarketDataPort.fetch().
+                Expected columns: open, high, low, close, volume.
+                Index: DatetimeIndex sorted ascending.
+
+        Returns:
+            A DataFrame whose rows will be passed one at a time to
+            generate_signal(). Shape and column names are strategy-defined.
+        """
+
+    @abstractmethod
     def generate_signal(self, features: pd.Series) -> Signal:
         """Generate a trading signal from a row of pre-computed features.
 
