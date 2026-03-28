@@ -134,6 +134,17 @@ Retrieve performance metrics for a completed backtest. Returns placeholder value
 
 ---
 
+## Registered Strategies
+
+| Strategy ID | Symbol | Model Type |
+|---|---|---|
+| `goldsight_v1` | `GC=F` | RandomForest |
+| `alphatrader_v1` | `SPY` | DQN |
+
+Strategies are queryable via `GET /api/v1/strategies` and `GET /api/v1/strategies/{strategy_id}`. Each strategy declares the symbols it supports; a backtest request with a mismatched symbol is rejected with a 422 before the simulation runs.
+
+---
+
 ## Tech Stack
 
 | Concern | Tool |
@@ -170,9 +181,9 @@ Six tests cover all three backtest endpoints: two tests for `POST /backtests`, t
 
 ## Roadmap
 
-- [ ] Implement backtesting simulation loop and real metrics output
-- [ ] Integrate ML/RL strategy engine (Random Forest, DQN)
+- [x] Implement backtesting simulation loop and real metrics output
+- [x] Integrate ML/RL strategy engine (RandomForest - GoldSight, DQN - AlphaTrader)
 - [ ] Swap in-memory repository for PostgreSQL + TimescaleDB adapter
-- [ ] Implement remaining resource endpoints (strategies, market data, runs, orders)
+- [ ] Implement remaining resource endpoints (market data, runs, orders)
 - [ ] Full JWT authentication
 - [ ] Broker integration (paper and live trading)
