@@ -18,7 +18,7 @@ from core.ports.market_data import MarketDataPort
 from data.feature_pipeline import FeaturePipeline
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# Helpers
 
 
 def make_ohlcv(n: int = 60) -> pd.DataFrame:
@@ -85,6 +85,10 @@ class SignalSequenceStrategy(Strategy):
     def name(self) -> str:
         return "Test Sequence Strategy"
 
+    @property
+    def supported_symbols(self) -> frozenset[str]:
+        return frozenset({"GC=F"})  # matches make_run() default symbol
+
     def compute_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Delegate to FeaturePipeline, preserving existing test behavior."""
         from data.feature_pipeline import FeaturePipeline
@@ -100,7 +104,7 @@ class SignalSequenceStrategy(Strategy):
         return sig
 
 
-# ── Tests ─────────────────────────────────────────────────────────────────────
+# Tests
 
 
 def test_buy_signal_opens_position_and_records_trade():

@@ -8,6 +8,7 @@ from app.models import (
 )
 from app.security import require_auth
 from core.domain.backtest import BacktestMetrics, BacktestStatus
+from core.errors import UnsupportedSymbolError
 from infra.wiring import build_backtest_service
 
 _service = build_backtest_service()
@@ -19,7 +20,10 @@ _NOT_FOUND = {"error": {"code": "NOT_FOUND", "message": "Backtest not found"}}
 
 @router.post("/backtests", response_model=BacktestCreatedResponse, status_code=status.HTTP_201_CREATED)
 def create_backtest(req: BacktestRequest) -> BacktestCreatedResponse:
-    run = _service.create(req)
+    try:
+        run = _service.create(req)
+    except UnsupportedSymbolError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e))
     return BacktestCreatedResponse(backtest_id=run.backtest_id, status=run.status)
 
 

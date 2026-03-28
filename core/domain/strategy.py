@@ -27,6 +27,16 @@ class Strategy(ABC):
     def name(self) -> str:
         """Human-readable display name for this strategy."""
 
+    @property
+    @abstractmethod
+    def supported_symbols(self) -> frozenset[str]:
+        """The set of symbols this strategy is valid for.
+
+        BacktestService validates the requested symbol against this set
+        before running the simulation. Returning frozenset() means the
+        strategy accepts no symbols and will always be rejected.
+        """
+
     def reset(self) -> None:
         """Lifecycle hook called by BacktestEngine before each simulation run.
 

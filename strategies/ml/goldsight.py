@@ -49,6 +49,11 @@ class GoldSightStrategy(Strategy):
         """Human-readable display name."""
         return "GoldSight v1"
 
+    @property
+    def supported_symbols(self) -> frozenset[str]:
+        """GoldSight is trained on gold futures data only."""
+        return frozenset({"GC=F"})
+
     def compute_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Compute features by delegating to FeaturePipeline.
 
