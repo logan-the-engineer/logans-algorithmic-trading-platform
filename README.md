@@ -93,8 +93,6 @@ logans-algorithmic-trading-platform/
 
 ## Implemented Endpoints
 
-All endpoints require a `Bearer` token in the `Authorization` header. Authentication is stubbed; any non-empty token is accepted (e.g., `Authorization: Bearer dev`).
-
 ### `POST /api/v1/backtests`
 Submit a backtest run. Accepts a strategy ID, symbols, timeframe, date range, initial capital, fees, slippage, and optional strategy parameters. The simulation runs synchronously; the response reflects the terminal run state.
 
@@ -196,6 +194,8 @@ uvicorn app.main:app --reload
 ```
 
 Swagger UI is available at `http://localhost:8000/docs`.
+
+All endpoints require a `Bearer` token. Authentication is stubbed; any non-empty token is accepted locally. In Swagger UI, click **Authorize** and enter any value (e.g., `dev`). For curl or other clients, pass `-H "Authorization: Bearer dev"`.
 
 ---
 
