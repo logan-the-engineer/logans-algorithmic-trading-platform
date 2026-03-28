@@ -6,8 +6,7 @@ A modular algorithmic trading research and execution platform built with Python 
 
 ## Architecture
 
-The codebase is organized into four layers. Each layer depends only on the one directly below it (e.g., routers never touch `infra/`, services never touch `app/`).
-
+The codebase is organized into four layers. Each layer depends only on the one directly below it (e.g., routers never touch `infra/`, services never touch `app/`). This boundary enforcement keeps the simulation engine independently testable and the data source swappable without touching business logic.
 ```
 app/routers/   ->  HTTP boundary (FastAPI route handlers)
 services/      ->  Use-case orchestration (business logic)
@@ -19,12 +18,11 @@ infra/         ->  Adapters (repositories, external integrations)
 
 ## Project Status
 
-The backtesting vertical slice is fully implemented end-to-end: domain models, repository, service, HTTP handlers, and pytest suite. All other resource endpoints exist as intentional stubs, shaped by the OpenAPI spec, and ready for implementation in future sprints.
+The platform supports end-to-end backtesting across two registered ML strategies: a RandomForest classifier on gold futures (GoldSight) and a Deep Q-Network agent on SPY (AlphaTrader). A backtest request flows from the HTTP layer through service-layer symbol validation, into a bar-by-bar simulation engine that computes performance metrics from the resulting equity curve. Both strategies are queryable via the strategies endpoints and executable via the backtest endpoints. All other resource endpoints exist as intentional stubs, shaped by the OpenAPI spec, and ready for implementation in future iterations.
 
 ---
 
 ## File Structure
-
 ```
 logans-algorithmic-trading-platform/
 ├── openapi.yaml                              # OpenAPI 3.0 spec - source of truth for all endpoint shapes
@@ -98,13 +96,13 @@ logans-algorithmic-trading-platform/
 All endpoints require a `Bearer` token in the `Authorization` header. Authentication is stubbed; any non-empty token is accepted (e.g., `Authorization: Bearer dev`).
 
 ### `POST /api/v1/backtests`
-Submit a backtest run. Accepts a strategy ID, symbols, timeframe, date range, initial capital, fees, slippage, and optional strategy parameters. Returns a UUID and `status: finished`.
+Submit a backtest run. Accepts a strategy ID, symbols, timeframe, date range, initial capital, fees, slippage, and optional strategy parameters. The simulation runs synchronously; the response reflects the terminal run state.
 
 **Request body**
 ```json
 {
-  "strategy_id": "sma_cross_v1",
-  "symbols": ["AAPL"],
+  "strategy_id": "goldsight_v1",
+  "symbols": ["GC=F"],
   "timeframe": "1d",
   "start": "2020-01-01",
   "end": "2023-01-01",
@@ -132,9 +130,9 @@ Retrieve the status and configuration of a backtest run by ID. Returns 404 for u
 ```json
 {
   "backtest_id": "3fa85f64-...",
-  "status": "queued",
-  "strategy_id": "sma_cross_v1",
-  "symbols": ["AAPL"],
+  "status": "finished",
+  "strategy_id": "goldsight_v1",
+  "symbols": ["GC=F"],
   "timeframe": "1d",
   "start": "2020-01-01",
   "end": "2023-01-01",
@@ -183,6 +181,7 @@ Strategies are queryable via `GET /api/v1/strategies` and `GET /api/v1/strategie
 | Framework | FastAPI |
 | Validation | Pydantic v2 |
 | API spec | OpenAPI 3.0 (`openapi.yaml`) |
+| ML | scikit-learn (RandomForest), PyTorch (DQN), joblib |
 | Storage | In-memory (dict-based); PostgreSQL + TimescaleDB planned |
 | Testing | pytest + FastAPI `TestClient` |
 | Runtime | Python 3.11+, uvicorn |
